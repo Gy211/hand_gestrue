@@ -146,11 +146,19 @@ def detect_gesture(hand_landmarks):
         
         # Get finger positions
         index_tip_y = hand_landmarks.landmark[8].y
+        index_tip_x = hand_landmarks.landmark[8].x
         index_pip_y = hand_landmarks.landmark[6].y
         wrist_y = hand_landmarks.landmark[0].y
         
         # Calculate the distance between tip and PIP joint
         finger_extension = abs(index_tip_y - index_pip_y)
+        
+        # Map finger position to screen coordinates
+        screen_x = int(index_tip_x * screen_width)
+        screen_y = int(index_tip_y * screen_height)
+        
+        # Move mouse to finger position
+        pyautogui.moveTo(screen_x, screen_y, duration=0.1)
         
         # Check if finger is pointing forward (lower y value means more forward)
         if index_tip_y < wrist_y - 0.2 and finger_extension > 0.1:

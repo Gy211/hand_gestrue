@@ -134,39 +134,29 @@ def landmarks_to_feature_vector(hand_landmarks):
     return np.array(features)
 
 def detect_gesture(hand_landmarks):
-    global last_click_time
-    
     # Get the palm position (using wrist landmark)
     palm_y = hand_landmarks.landmark[0].y
     palm_x = hand_landmarks.landmark[0].x
-    
-    # Define center zone where no movement should be detected
-    CENTER_Y = 0.5
-    CENTER_X = 0.5
-    DEAD_ZONE = 0.15  # Increased dead zone in the middle
-    
-    # Make thresholds more extreme for WASD controls
-    UP_THRESHOLD = 0.3      # More extreme up threshold
-    DOWN_THRESHOLD = 0.7    # More extreme down threshold
-    LEFT_THRESHOLD = 0.3    # More extreme left threshold
-    RIGHT_THRESHOLD = 0.7   # More extreme right threshold
     
     # Check for single finger click FIRST (before WASD)
     if (is_finger_raised(hand_landmarks, 8, 6) and    # Only index raised
         not is_finger_raised(hand_landmarks, 12, 10) and  # Middle lowered
         not is_finger_raised(hand_landmarks, 16, 14) and  # Ring lowered
-        not is_finger_raised(hand_landmarks, 20, 18) and  # Pinky lowered
-        palm_y > 0.3 and palm_y < 0.7):  # Hand in middle zone for clicking
+        not is_finger_raised(hand_landmarks, 20, 18)):    # Pinky lowered
         
-        # Get finger tip y position for forward movement detection
-        finger_y = hand_landmarks.landmark[8].y
+        # Get finger positions
+        index_tip_y = hand_landmarks.landmark[8].y
+        index_pip_y = hand_landmarks.landmark[6].y
         wrist_y = hand_landmarks.landmark[0].y
         
-        # Make click detection more precise
-        if finger_y < wrist_y - 0.3:
+        # Calculate the distance between tip and PIP joint
+        finger_extension = abs(index_tip_y - index_pip_y)
+        
+        # Check if finger is pointing forward (lower y value means more forward)
+        if index_tip_y < wrist_y - 0.2 and finger_extension > 0.1:
             pyautogui.click()
             return 'Click'
-        return 'Click Ready'
+        return 'Point'
     
     # Check for Space bar (two fingers raised)
     if (is_finger_raised(hand_landmarks, 8, 6) and    # Index raised
@@ -184,24 +174,29 @@ def detect_gesture(hand_landmarks):
     keyboard.release('s')
     keyboard.release('d')
     
+    # Define center zone where no movement should be detected
+    CENTER_Y = 0.5
+    CENTER_X = 0.5
+    DEAD_ZONE = 0.15  # Increased dead zone in the middle
+    
     # If hand is in the dead zone, don't trigger any movement
     if (abs(palm_y - CENTER_Y) < DEAD_ZONE and 
         abs(palm_x - CENTER_X) < DEAD_ZONE):
         return 'None'
     
-    # Check vertical movement (W and S) with more extreme thresholds
-    if palm_y < UP_THRESHOLD:
+    # Check vertical movement (W and S)
+    if palm_y < 0.3:
         keyboard.press('w')
         return 'Move Forward (W)'
-    elif palm_y > DOWN_THRESHOLD:
+    elif palm_y > 0.7:
         keyboard.press('s')
         return 'Move Backward (S)'
     
-    # Check horizontal movement (A and D) with more extreme thresholds
-    if palm_x < LEFT_THRESHOLD:
+    # Check horizontal movement (A and D)
+    if palm_x < 0.3:
         keyboard.press('a')
         return 'Move Left (A)'
-    elif palm_x > RIGHT_THRESHOLD:
+    elif palm_x > 0.7:
         keyboard.press('d')
         return 'Move Right (D)'
     
